@@ -45,7 +45,7 @@ Node B joins the network of Node A
 
 **Node A** (172.17.0.2:4444)  UUID 0
 
-```
+```python
 import p2py, time
 
 node = p2py.Node(4444) #Create a node listening on port 4444
@@ -60,7 +60,7 @@ while True: #Wait forever
 
 **Node B** (172.11.0.3:4445) UUID 1
 
-```
+```python
 import p2py, time
 
 node = p2py.Node(4445) #Create a node listening on port 4444
@@ -87,7 +87,7 @@ In this example I will define a custom request type thet will add 1 to a request
 
 **Node A** (172.17.0.2:4444) 
 
-```
+```python
 import p2py, time
 
 node = p2py.Node(4444) #Create a node listening on port 4444
@@ -113,7 +113,7 @@ while True: #Wait forever
 
 **Node B** (172.11.0.3:4445)
 
-```
+```python
 import p2py, time
 
 node = p2py.Node(4445) #Create a node listening on port 4444
