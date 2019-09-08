@@ -280,7 +280,24 @@ example_node.send_to_peer_book(message)
 example_node.close_all_connections()
 #left the network
 ```
+##### *Node*.add_handler(*message_type[str]*, *handler[func]*)
 
+> Defines a handler for a given ***message_type***. It takes 2 arguments: ***message_type*** and ***handler*** function.
+>
+> ***Handler*** function has to take 3 arguments: 
+> - **node** - a pointer to the local node,
+> - **conn** - Connection object from which the request was sent,
+> - **request** - Request object sent by requesting node.
+
+**Example:**
+
+```python
+def some_function(node, conn, request):
+	#do something
+
+node.add_handler("some type", some_function)
+node.start()
+```
 
 
 #### Variables
@@ -309,6 +326,39 @@ print(example_node.network_size)
 #77
 ```
 
+### p2py.Request(*callback_address*, *contents*)
+
+> Creates request object
+
+##### *Request*.respond(*response[dict]*)
+
+> Sends the ***response*** to the requester.
+
+**Example:**
+
+```python
+msg = {
+    'type' : 'SOME RESP',
+    'data' : 'some data'
+}
+
+request.respond(msg)
+```
+
+##### *Request*.bounce(*address[opt]*, *UUID[opt]*)
+
+> Sends the requests to another node specified by either ***address*** OR ***UUID***. 
+>
+> The request will be processed by another peer **but the response will be sent to the same requester**.
+
+
+**Example:**
+
+```python
+#Oh no! I can't answer the request. Maybe UUID 7 knows the answer
+
+request.bounce(UUID=7)
+```
 
 
 ### Message types
@@ -323,3 +373,4 @@ message = {
     'data' : text_message
 }
 ```
+
