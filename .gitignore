@@ -1,0 +1,5 @@
+# Python enviroment #
+###################
+__pycache__
+env
+*.egg-info
