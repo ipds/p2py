@@ -61,7 +61,6 @@ class P2P_Node:
             "NEW PEER" : self.handle_new_peer,
             "PEER LEFT" : self.handle_peer_left,
             "UUID ADDRESS REQUEST" : self.handle_uuid_address_request,
-            "UUID ADDRESS REQUEST RESPONSE" : self.handle_uuid_address_request_response,
             "CONNECTION INIT" : self.handle_connection_init
         }
 
@@ -202,14 +201,14 @@ class P2P_Node:
         self.logger.error("Couldn't join the network")
 
 
-    def connect_to_address(self, address, temp=False, const=False):
+    def connect_to_address(self, address, const=False):
         if address in [(self.server_host, self.server_port), ('127.0.0.1', self.server_port), ('localhost', self.server_port)]:
             if not self.allow_self_connections:
                 self.logger.warning('YOU CANT CONNECT TO YOURSELF (Unless you really need to. Set allow_self_connections to True)')
                 return False
             else:
                 # create a connection to self
-                c = Connection(self, None, temp=temp, const=const)
+                c = Connection(self, None, const=const)
                 self.connections.append(c)
 
         if address in self.connections_by_address.keys():
@@ -218,7 +217,7 @@ class P2P_Node:
 
         try:
             # create a new p2p connection
-            c = Connection(self, address, temp=temp, const=const)
+            c = Connection(self, address, const=const)
             self.connections.append(c)
         except:
             try:
@@ -315,7 +314,7 @@ class P2P_Node:
                 self.connections.append(c)
                 break
 
-    def connect_to_UUID(self, UUID, temp=True):
+    def connect_to_UUID(self, UUID, const=False):
         if UUID >= self.network_size:
             #desired peer doesn't exist in the network
             return False
@@ -341,7 +340,7 @@ class P2P_Node:
         }
         #pass the request
         result = route.request(request)
-        return self.connect_to_address(result['data']['address'])
+        return self.connect_to_address(result['data']['address'], const)
 
 
     def close_connection(self, conn):
@@ -369,7 +368,7 @@ class P2P_Node:
             self.event_sent_message(conn.connection_address)
 
     def send_to_address(self, address, message):
-        conn = self.connect_to_address(address, temp=True)
+        conn = self.connect_to_address(address)
 
         if conn:
             conn.send_message(message)
@@ -392,8 +391,11 @@ class P2P_Node:
         else:
             raise ValueError('Expected two arguments ([UUID or address or connection], request)')
 
-        result = conn.request(request_msg)
-
+        if conn:
+            result = conn.request(request_msg)
+        else:
+            result = False
+            
         if conn.client_UUID not in self.peer_book.keys():
             self.close_connection(conn)
         
@@ -428,6 +430,7 @@ class P2P_Node:
         self.peer_book_lock.acquire()
         self.peer_book[UUID] = conn
         self.peer_book_lock.release()
+        self.peer_book[UUID].const = True
 
         if UUID not in self.active_peers:
             self.active_peers.append(UUID)
@@ -457,18 +460,22 @@ class P2P_Node:
             if UUID not in self.free_UUIDs:
                 self.free_UUIDs.append(UUID)
 
-        self.peer_book_lock.release()
+            if UUID in self.active_peers:
+                self.active_peers.remove(UUID)
 
-        if UUID in self.active_peers:
-            self.active_peers.remove(UUID)
             self.network_size -= 1
+
+        self.peer_book_lock.release()
 
 ###########################################################################################################
 # HANDLERS ################################################################################################
 ###########################################################################################################
     
     def handle_test(self, conn, request):
-        resp = 'Hi!'
+        resp = {
+            'type' : 'TEXT',
+            'data'  : 'Hi!'
+        }
         request.respond(resp)
 
     def handle_text_message(self, conn, message):
@@ -660,40 +667,15 @@ class P2P_Node:
         request.respond(response)
 
         self.logger.debug(f"UUID {UUID} address sent to UUID {conn.client_UUID}")
-        
-
-    #outdated
-    def handle_uuid_address_request_response(self, conn, response):
-        UUID = response['data']['UUID']
-        address = response['data']['address']
-        self.logger.debug(f"Got UUID {UUID} address: {tuple(address)} from {conn.client_UUID}")
 
 
-        if UUID not in self.pending_uuids.keys():
-            return
-
-        temp = self.pending_uuids[UUID]
-        del self.pending_uuids[UUID]
-
-        c = self.connect_to_address(tuple(address), temp=temp)
-
-        if not temp:
-            self.add_node(UUID, c)
-
-        #check if there are any pending messages to be sent to tat peer
-        if UUID in self.pending_messages.keys():
-            for msg in self.pending_messages[UUID]:
-                self.send_to_connection(c, msg)
-                self.pending_messages[UUID].remove(msg)
-
-
-    def handle_closed_connection(self, conn, UUID, temp=False):
+    def handle_closed_connection(self, conn, UUID):
         if conn:
             try:
                 address = conn.connection_address
             except:
                 pass
-        if UUID is not None and not temp:
+        if UUID in self.peer_book.keys():
             self.delete_node(UUID)
         if conn in self.connections:
             self.connections.remove(conn)
@@ -795,7 +777,7 @@ class Connection(Thread):
         This object is used to manage connection between two peers. 
         It runs as a separate thread
     '''
-    def __init__(self, callback_node, client_address, client_socket=None, client_UUID=None, temp=False, const=False):
+    def __init__(self, callback_node, client_address, client_socket=None, client_UUID=None, const=False):
         Thread.__init__(self) #Start this thread.
 
         # Set a name of this connection.
@@ -807,10 +789,7 @@ class Connection(Thread):
         # Set the UUID of connected node (default is None).
         self.client_UUID = client_UUID
 
-        # Connection lives only for the first message and response
-        self.temp = False
-
-        # Defines if the connection is killable
+        # Defines if the connection persists (default for peer book)
         self.const = const
 
         # Counts the nuber of messages/responses sent/received
@@ -866,13 +845,18 @@ class Connection(Thread):
 
         #check if this uuid is your successor. If so - add it to peer book
         if client_address:
-            if self.client_UUID in callback_node.my_successors and not temp:
+            if self.client_UUID in callback_node.my_successors:
                 callback_node.add_node(self.client_UUID, self)
+                const = True
 
+            # Exchange info about constance of this connection
+            self.send_message(const)
+            client_const = self.receive_message(self.client_socket.recv(HEADER_LENGTH))
+            if client_const:
+                self.const = True
+                
         # Set name of this thread (mainly for logs).
         self.setName(f"{self.connection_address[0]}:{self.connection_address[1]}")
-
-        self.temp = temp #decides if connection is temporary (dies after one message)
 
         # Start the thread.
         self.running = True
@@ -901,6 +885,7 @@ class Connection(Thread):
                     message = self.self_connection_bridge.get(timeout = MESSAGE_QUEUE_TIMEOUT)
                     self.self_connection_bridge.task_done()
 
+
                 if type(message) == dict:
                     message_type = message['type']
 
@@ -916,7 +901,7 @@ class Connection(Thread):
                         self.callback_node.pending_requests[request_id] = message
 
                     #Restrictions for non UUID connections
-                    elif self.client_UUID is not None or self.client_UUID is None and message_type in ["JOIN REQUEST", "JOIN REQUEST FINALIZED"]:
+                    elif self.client_UUID is not None or self.client_UUID is None and message_type in ["JOIN REQUEST", "JOIN REQUEST FINALIZED", "TEXT", "TEST"]:
                         #put this message in queue
                         task = {
                             'func' : self.callback_node.message_handlers[message_type],
@@ -929,7 +914,7 @@ class Connection(Thread):
                     message_type = message.get_contents()['type']
 
                     #Restrictions for non UUID connections
-                    if self.client_UUID is not None or self.client_UUID is None and message_type in ["JOIN REQUEST", "JOIN REQUEST FINALIZED"]:
+                    if self.client_UUID is not None or self.client_UUID is None and message_type in ["JOIN REQUEST", "JOIN REQUEST FINALIZED", "TEXT", "TEST"]:
                         #put this message in queue
                         task = {
                             'func' : self.callback_node.message_handlers[message_type],
@@ -942,7 +927,7 @@ class Connection(Thread):
 
             except socket.timeout:
                 #Kill non UUID connections after some time
-                if self.client_UUID == None and not self.const:
+                if not self.const:
                     death_clock += 1
                 continue
             except queue.Empty:
@@ -950,14 +935,14 @@ class Connection(Thread):
             except ConnectionResetError:
                 break
 
-            # if self.temp and self.messages_counter >= 2:
+            # if not self.const and self.messages_counter >= 4:
             #     #close the connection if it was only temporary and 2 messages were sent/received
             #     self.send_message({'type' : 'KILL CONNECTION'})
-            #     self.callback_node.handle_closed_connection(self, self.client_UUID, self.temp)
+            #     self.callback_node.handle_closed_connection(self, self.client_UUID)
 
             time.sleep(0.2)
 
-        self.callback_node.handle_closed_connection(self, self.client_UUID, self.temp)
+        self.callback_node.handle_closed_connection(self, self.client_UUID)
 
     # This function sends messages
     def send_message(self, message):
@@ -970,6 +955,7 @@ class Connection(Thread):
                 self.client_socket.send(bytes_message)
             else:
                 self.self_connection_bridge.put(message)
+            self.messages_counter += 1
             return True
         except BrokenPipeError:
             return False
@@ -987,6 +973,7 @@ class Connection(Thread):
             full_message = self.client_socket.recv(message_length)
             full_message = pickle.loads(full_message)
 
+            self.messages_counter += 1
             return full_message
         else:
             # Connection closed
@@ -1031,7 +1018,7 @@ class Connection(Thread):
 
     def stop(self):
         # Stop the main loop
-        self.callback_node.handle_closed_connection(self, self.client_UUID, self.temp)
+        self.callback_node.handle_closed_connection(self, self.client_UUID)
         self.running = False
 
     def close(self):
@@ -1058,7 +1045,7 @@ class Request:
         response['request_id'] = self.request_id
         connection = self.node.connect_to_address(self.callback_address)
         connection.send_message(response)
-        if connection.client_UUID not in self.node.peer_book.keys():
+        if not connection.const:
             connection.stop()
 
     def bounce(self, address = None, UUID = None):
