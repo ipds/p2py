@@ -2,7 +2,7 @@ from distutils.core import setup
 setup(
   name = 'p2py',         # How you named your package folder (MyLib)
   packages = ['p2py'],   # Chose the same as "name"
-  version = '0.1',      # Start with a small number and increase it with every change you make
+  version = '0.18',      # Start with a small number and increase it with every change you make
   license='AGPLv3',        # Chose a license from here: https://help.github.com/articles/licensing-a-repository
   description = 'The simplest peer to peer networking Python library',   # Give a short description about your library
   author = 'Adam Szokalski',                   # Type in your name

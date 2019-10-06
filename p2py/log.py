@@ -1,5 +1,7 @@
 import logging, colorlog
-from utils.constants import *
+
+#log
+LOG_DIR = 'logs/'
 
 def init_logger(dunder_name, testing_mode, address, mute=False) -> logging.Logger:
     log_format = (
@@ -18,7 +20,7 @@ def init_logger(dunder_name, testing_mode, address, mute=False) -> logging.Logge
     colorlog.basicConfig(format=colorlog_format)
     logger = logging.getLogger(dunder_name)
 
-    logger.propagate = !mute
+    logger.propagate = not mute
 
     if testing_mode:
         logger.setLevel(logging.DEBUG)
@@ -47,3 +49,4 @@ def init_logger(dunder_name, testing_mode, address, mute=False) -> logging.Logge
     logger.addHandler(fh)
 
     return logger
+    

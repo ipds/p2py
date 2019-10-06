@@ -1,4 +1,5 @@
-#p2p
+#CONSTANTS
+
 DEFAULT_PORT=10000
 
 HEADER_LENGTH = 10
@@ -14,6 +15,3 @@ DB_QUEUE_TIMEOUT = 2
 
 NON_PEER_BOOK_CONNECTION_LIFETIME = 3 #that's how long a connection without UUID will live (this * connection_timeout)
 if NON_PEER_BOOK_CONNECTION_LIFETIME == 0: NON_PEER_BOOK_CONNECTION_LIFETIME = float('inf')
-
-#log
-LOG_DIR = 'logs/'

@@ -25,15 +25,19 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import socket, select, time, pickle, queue, random, string
 from threading import Thread, RLock
 from _thread import *
-from utils.constants import *
-from utils.log import init_logger
+from p2py.log import init_logger
+from p2py.constants import *
 
 class P2P_Node:
+    running = True
+    task_queue = queue.LifoQueue()
+    logger = init_logger(__name__, testing_mode=True, address="a")
+    connections = []
 ###########################################################################################################
 # CONSTRUCTOR / DESTRUCTOR ################################################################################
 ###########################################################################################################
 
-    def __init__(self, port=DEFAULT_PORT, host='', rendezvous_server_address=None, testing_mode=False, allow_self_connections=False):
+    def __init__(self, port=DEFAULT_PORT, host='', rendezvous_server_address=None, testing_mode=False, allow_self_connections=False, mute_logger=False):
 
         if not host:
             #If host wasn't specified get it by contacting a public website
@@ -45,11 +49,12 @@ class P2P_Node:
 
         self.server_address = (self.server_host, self.server_port)
 
-        self.logger = init_logger(__name__, testing_mode=testing_mode, address=self.server_address)
+        self.logger = init_logger(__name__, testing_mode=testing_mode, address=self.server_address, mute=mute_logger)
 
         self.allow_self_connections = allow_self_connections
 
         self.message_handlers = {
+            "TEST": self.handle_test,
             "TEXT": self.handle_text_message,
             "JOIN REQUEST": self.handle_join_request,
             "JOIN REQUEST FINALIZED": self.handle_join_request_finalized,
@@ -59,6 +64,7 @@ class P2P_Node:
             "UUID ADDRESS REQUEST RESPONSE" : self.handle_uuid_address_request_response,
             "CONNECTION INIT" : self.handle_connection_init
         }
+
 
         self.connections = [] #All active Connection objects
 
@@ -460,6 +466,10 @@ class P2P_Node:
 ###########################################################################################################
 # HANDLERS ################################################################################################
 ###########################################################################################################
+    
+    def handle_test(self, conn, request):
+        resp = 'Hi!'
+        request.respond(resp)
 
     def handle_text_message(self, conn, message):
         try:
