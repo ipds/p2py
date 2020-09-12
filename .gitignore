@@ -3,3 +3,32 @@
 __pycache__
 env
 *.egg-info
+
+*.DS_Store
+
+*venv*
+*build
+*.py[cod]
+.*cache
+dist/
+build/
+eggs/
+*.egg
+*.eggs
+
+.tox/
+.coverage*
+coverage.xml
+nosetests.xml
+
+# Editor config
+.idea
+.vscode
+nbproject
+pyvenv.cfg
+
+# Sphinx documentation
+docs/_build
+
+# PyBuilder
+target/
