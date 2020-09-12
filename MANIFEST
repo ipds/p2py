@@ -2,4 +2,6 @@
 setup.cfg
 setup.py
 p2py/__init__.py
+p2py/constants.py
+p2py/log.py
 p2py/p2p.py
