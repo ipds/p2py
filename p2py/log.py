@@ -1,7 +1,7 @@
-import logging, colorlog
+import logging, colorlog, os, errno
 
 #log
-LOG_DIR = 'logs/'
+LOG_DIR = 'p2py-logs/'
 
 def init_logger(dunder_name, testing_mode, address, mute=False) -> logging.Logger:
     log_format = (
@@ -27,6 +27,11 @@ def init_logger(dunder_name, testing_mode, address, mute=False) -> logging.Logge
     else:
         logger.setLevel(logging.INFO)
 
+    try:
+        crate_log_files()
+    except:
+        pass
+
     # Output full log
     fh = logging.FileHandler(LOG_DIR+'app.log')
     fh.setLevel(logging.DEBUG)
@@ -50,3 +55,10 @@ def init_logger(dunder_name, testing_mode, address, mute=False) -> logging.Logge
 
     return logger
     
+def crate_log_files():
+    if not os.path.exists(os.path.dirname(LOG_DIR)):
+        try:
+            os.makedirs(os.path.dirname(LOG_DIR))
+        except OSError as exc: # Guard against race condition
+            if exc.errno != errno.EEXIST:
+                raise

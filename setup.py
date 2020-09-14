@@ -5,7 +5,7 @@ from setuptools import setup
 setup(
   name = 'p2py',
   packages = ['p2py'],
-  version = '0.20',
+  version = '0.23',
   author = 'Adam Szokalski',
   author_email = 'aszokalski@ipds.team',
   url = 'https://github.com/ipds/p2py',

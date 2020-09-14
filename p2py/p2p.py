@@ -1,27 +1,3 @@
-'''
-p2py is an official p2p networking library created for Python implementation of Interplanetary Database System (IPDS).
-
-Copyright (C) 2019  Adam Szokalski and other authors < see https://ipds.network/authors or https://ipds.team >. All rights reserved.
-Using IPDS-Python for commercial purposes requires an acknowledgment.
-
-https://ipds.network and https://github.com/ipds/IPDS-Python
-Contact: contact@ipds.team or aszokalski@ipds.team
-
-This program is free software: you can redistribute it and/or modify
-it under the terms of the GNU Affero General Public License as published
-by the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU Affero General Public License for more details.
-
-You should have received a copy of the GNU Affero General Public License
-along with this program.  If not, see <https://www.gnu.org/licenses/>.
-
-'''
-
 import socket, select, time, pickle, queue, random, string
 from threading import Thread, RLock
 from _thread import *
